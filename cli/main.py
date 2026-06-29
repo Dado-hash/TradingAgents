@@ -48,7 +48,7 @@ from tradingagents.graph.analyst_execution import (
     sync_analyst_tracker_from_chunk,
 )
 from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.reports.exporter import save_report_to_disk
+from tradingagents.reports.exporter import markdown_to_pdf, save_report_to_disk
 
 console = Console()
 
@@ -1214,8 +1214,11 @@ def run_analysis(checkpoint: bool = False):
         save_path = Path(save_path_str)
         try:
             report_file = save_report_to_disk(final_state, selections["ticker"], save_path)
+            decision_pdf = markdown_to_pdf(save_path / "5_portfolio" / "decision.md")
             console.print(f"\n[green]✓ Report saved to:[/green] {save_path.resolve()}")
             console.print(f"  [dim]Complete report:[/dim] {report_file.name}")
+            if decision_pdf:
+                console.print(f"  [dim]PDF decision:[/dim] {decision_pdf.name}")
         except Exception as e:
             console.print(f"[red]Error saving report: {e}[/red]")
 
