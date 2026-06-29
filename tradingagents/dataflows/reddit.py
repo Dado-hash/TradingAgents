@@ -44,7 +44,7 @@ _ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
 # Default subreddits ordered roughly by signal density for ticker-specific
 # discussion. wallstreetbets has the most volume but most noise; stocks /
 # investing trend more measured. Caller can override.
-DEFAULT_SUBREDDITS = ("wallstreetbets", "stocks", "investing")
+DEFAULT_SUBREDDITS = ("wallstreetbets", "stocks")
 
 
 def _search_qs(ticker: str, limit: int) -> str:
@@ -109,7 +109,7 @@ def _fetch_subreddit_rss(
             root = ET.fromstring(resp.read())
     except HTTPError as exc:
         if exc.code == 429 and _retry:
-            wait = _retry_after_seconds(exc) or 5.0
+            wait = _retry_after_seconds(exc) or 10.0
             logger.warning(
                 "Reddit RSS 429 for r/%s · %s — backing off %.1fs then retrying once",
                 sub, ticker, wait,
@@ -191,7 +191,7 @@ def fetch_reddit_posts(
     subreddits: Iterable[str] = DEFAULT_SUBREDDITS,
     limit_per_sub: int = 5,
     timeout: float = 10.0,
-    inter_request_delay: float = 1.0,
+    inter_request_delay: float = 3.0,
 ) -> str:
     """Fetch recent Reddit posts mentioning ``ticker`` across finance
     subreddits and return them as a formatted plaintext block.

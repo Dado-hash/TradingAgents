@@ -96,6 +96,12 @@ _BY_ID: dict[str, ModelCapabilities] = {
     "deepseek-reasoner": _DEEPSEEK_THINKING,
     "deepseek-v4-flash": _DEEPSEEK_THINKING,
     "deepseek-v4-pro": _DEEPSEEK_THINKING,
+    "gemma-4-12b-qat": ModelCapabilities(
+        supports_tool_choice=False,
+        supports_json_mode=True,
+        supports_json_schema=True,
+        preferred_structured_method="function_calling",
+    ),
     # MiniMax — full official model lineup per
     # platform.minimax.io/docs/api-reference/text-openai-api
     "MiniMax-M2.7": _MINIMAX_THINKING,

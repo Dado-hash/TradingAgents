@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 _API = "https://api.stocktwits.com/api/2/streams/symbol/{ticker}.json"
 _UA = "tradingagents/0.2 (+https://github.com/TauricResearch/TradingAgents)"
+_CRYPTO_SUFFIXES = ("-USD", "-USDT", "-USDC")
+
+
+def _is_crypto(ticker: str) -> bool:
+    return any(ticker.upper().endswith(s) for s in _CRYPTO_SUFFIXES)
 
 
 def fetch_stocktwits_messages(ticker: str, limit: int = 30, timeout: float = 10.0) -> str:
@@ -33,6 +38,9 @@ def fetch_stocktwits_messages(ticker: str, limit: int = 30, timeout: float = 10.
     symbol has no messages, or the response shape is unexpected — the
     caller never has to special-case None or exceptions.
     """
+    if _is_crypto(ticker):
+        return f"<StockTwits does not support crypto tickers ({ticker.upper()}); skipping.>"
+
     url = _API.format(ticker=ticker.upper())
     req = Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
     try:
