@@ -17,7 +17,9 @@ tickers:
   - symbol: BTC-USD
     asset_type: crypto
     # analysts: [market, social, news]   # optional override
-  # - symbol: ETH-USD
-  #   asset_type: crypto
+  # - symbol: SPY
+  #   asset_type: stock
+  - symbol: ETH-USD
+    asset_type: crypto
   # - symbol: NVDA
   #   asset_type: stock
