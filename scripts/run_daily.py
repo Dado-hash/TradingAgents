@@ -44,6 +44,12 @@ logger = logging.getLogger("run_daily")
 EXIT_OK = 0
 EXIT_ALL_FAILED = 1
 EXIT_BAD_WATCHLIST = 2
+EXIT_ABORTED = 3
+
+
+class PipelineAborted(Exception):
+    """Raised when a non-recoverable error (e.g. LLM API outage) requires
+    the entire run to stop rather than continuing to the next ticker."""
 
 
 def _configure_logging(verbose: bool) -> None:
@@ -99,8 +105,17 @@ def _run_one(
         graph = TradingAgentsGraph(**graph_kwargs)
         logger.info("[%s] running propagate() ...", symbol)
         final_state, _decision = graph.propagate(symbol, analysis_date, asset_type=asset_type)
-    except Exception:
+    except Exception as exc:
         logger.exception("[%s] propagate() failed after %.1fs", symbol, time.monotonic() - t0)
+        # Detect transient LLM API outages (503 etc.) — no point retrying
+        # remaining tickers when the upstream provider is down.
+        import openai
+
+        if isinstance(exc, openai.InternalServerError) and 500 <= exc.status_code < 600:
+            raise PipelineAborted(
+                f"LLM API returned {exc.status_code} for {symbol}; "
+                "skipping remaining tickers"
+            ) from exc
         return None
     logger.info("[%s] propagate() done in %.1fs", symbol, time.monotonic() - t0)
 
@@ -191,6 +206,9 @@ def run(
     for entry in entries:
         try:
             result = _run_one(entry, analysis_date=analysis_date, reports_root=reports_root)
+        except PipelineAborted:
+            logger.warning("Pipeline aborted — stopping")
+            break
         except Exception:
             logger.exception("Unhandled error processing %s", entry.symbol)
             continue

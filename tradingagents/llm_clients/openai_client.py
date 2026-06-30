@@ -32,6 +32,32 @@ class NormalizedChatOpenAI(ChatOpenAI):
     """
 
     def invoke(self, input, config=None, **kwargs):
+        import logging
+        import time
+
+        logger = logging.getLogger("openai_client")
+
+        max_attempts = 6  # 1 initial + 5 retries
+        for attempt in range(max_attempts):
+            try:
+                return normalize_content(super().invoke(input, config, **kwargs))
+            except Exception as exc:
+                import openai
+
+                if (
+                    isinstance(exc, openai.InternalServerError)
+                    and 500 <= exc.status_code < 600
+                    and attempt < max_attempts - 1
+                ):
+                    logger.warning(
+                        "LLM API 5xx (%d), retry %d/%d in 60s",
+                        exc.status_code, attempt + 1, max_attempts - 1,
+                    )
+                    time.sleep(60)
+                    continue
+                raise
+
+        # Unreachable (loop always raises or returns)
         return normalize_content(super().invoke(input, config, **kwargs))
 
     def with_structured_output(self, schema, *, method=None, **kwargs):
@@ -289,7 +315,11 @@ class OpenAIClient(BaseLLMClient):
         elif self.base_url:
             llm_kwargs["base_url"] = self.base_url
 
-        # Forward user-provided kwargs
+        # Retries are handled by NormalizedChatOpenAI.invoke (5xx: 5×60s).
+        # Disable the SDK's built-in retries so they don't stack.
+        llm_kwargs.setdefault("max_retries", 0)
+
+        # Forward user-provided kwargs (can override max_retries if desired)
         for key in _PASSTHROUGH_KWARGS:
             if key in self.kwargs:
                 llm_kwargs[key] = self.kwargs[key]
